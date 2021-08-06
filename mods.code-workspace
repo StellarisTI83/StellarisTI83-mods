@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.c": "c",
+			"string.h": "c",
+			"stdlib.h": "c",
+			"main.h": "c",
+			"local_keys.h": "c",
+			"appvar.h": "c",
+			"generic_lists.h": "c",
+			"stdbool.h": "c",
+			"parsing.h": "c",
+			"type_traits": "c",
+			"stdint.h": "c"
+		}
+	}
+}

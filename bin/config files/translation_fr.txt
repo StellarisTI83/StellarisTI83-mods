@@ -1,0 +1,10 @@
+# french translation for stellaris ti84 edition
+# identifier = "text"
+
+lc_load = "Charger"
+lc_new_game = "Nouvelle partie"
+lc_settings = "Options"
+lc_exit = "Quitter"
+lc_save = "Sauvegarder"
+lc_back = "Retour"
+lc_create_galaxie = "Cr/ation de la galaxie"
