@@ -16,7 +16,9 @@
 			"stdbool.h": "c",
 			"parsing.h": "c",
 			"type_traits": "c",
-			"stdint.h": "c"
+			"stdint.h": "c",
+			"keys.h": "c",
+			"cstdlib": "c"
 		}
 	}
 }

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "main.h"
-#include "local_keys.h"
+#include "keys.h"
 #include "generic_lists.h"
 #include "appvar.h"
 #include "parsing.h"
@@ -13,14 +13,29 @@ void delete_list(GenericList *liste){
     int i = 0;
     configStruct *config;
     config = GenericCellGet(liste, i);
+    
+    #ifdef DEBUG
+    printf("\nDestroy list :\n");
+    #endif
+
     while(config) {
-        printf("%d, %s\n", config->key, config->value);
+        switch(config->type) {
+            case type_string:
+                #ifdef DEBUG
+                printf("key = %d value = '%s'\n", config->key, config->value_string);
+                #endif
+                break;
+            case type_int:
+                #ifdef DEBUG
+                printf("key = %d value = %d\n", config->key, config->value_int);
+                #endif
+                break;
+        }
         free(config);
         i++;
         config = GenericCellGet(liste, i);
     }
     GenericListFree(liste);
-    printf("\n");
 }
 
 int main() {
@@ -37,7 +52,10 @@ int main() {
 
     fclose(spaceship_file);
 
-    delete_list(spaceship_file);
-
-    return 0;
+    delete_list(spaceship_liste);
+    
+    #ifdef DEBUG
+    printf("\nEXIT_SUCCESS");
+    #endif
+    exit(EXIT_SUCCESS);
 }

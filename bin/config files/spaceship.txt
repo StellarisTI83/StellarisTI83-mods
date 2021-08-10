@@ -1,0 +1,7 @@
+# spaceship file
+# identifier = value
+
+fregate_01 = {
+    name = "Fregate"
+    ship_size = 1
+}

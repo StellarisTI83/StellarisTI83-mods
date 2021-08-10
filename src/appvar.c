@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "main.h"
 #include "appvar.h"
@@ -14,48 +15,97 @@ int sizeof_data(GenericList* liste) {
     int i = 0;
     config = GenericCellGet(liste, i);
     while(config) {
-        fileSize += sizeof(int) + sizeof(config->key) + sizeof(char) * strlen(config->value);
+        switch(config->type) {
+            case type_string:
+                fileSize += sizeof(uint16_t) + sizeof(config->key) + sizeof(char) * strlen(config->value_string);
+                break;
+            case type_int:
+                fileSize += sizeof(uint16_t) + sizeof(config->key) + sizeof(uint16_t);
+                break;
+        }
         i++;
         config = GenericCellGet(liste, i);
     }
-    fileSize += sizeof(int);
+    fileSize += sizeof(uint16_t);
     return fileSize;
 }
+
 void write_data(unsigned char *data, GenericList* liste, size_t fileSize) {
     configStruct *config;
     uint16_t i = 0;
     uint16_t data_index = 0;
     uint16_t dataBlockSize = 0;
     uint16_t key = 0;
+    bool error = false;
+    int list_size = 0;
     
-    data[0] = ((GenericListArraySize(liste)) & 0xFF);
-    data[1] = (((GenericListArraySize(liste))>>8) & 0xFF);
-    printf("size = %d\n", GenericListArraySize(liste));
+
+    #ifdef DEBUG
+    printf("\nWrite data :\nsize = %d\n", GenericListArraySize(liste));
+    #endif
 
     data_index += 2;
     config = GenericCellGet(liste, i);
     while(config) {
-        //taille du texte en octet
-        dataBlockSize = sizeof(char) * strlen(config->value);
+        //taille de la variable
+        switch (config->type) {
+            case type_string:
+                dataBlockSize = sizeof(char) * strlen(config->value_string);
+                break;
+            case type_int:
+                dataBlockSize = sizeof(uint16_t);
+                break;
+            default:
+                #ifdef DEBUG
+                printf("Error unknow type '%d'\n", config->type);
+                #endif
+                error = true;
+                i++;
+                config = GenericCellGet(liste, i);
+                continue;
+                break;
+        }
         memcpy(&data[data_index], &dataBlockSize, sizeof(uint16_t));
         data_index += sizeof(uint16_t);
+        #ifdef DEBUG
         printf("dataBlockSize = %d   ", dataBlockSize);
+        #endif
 
-        //clef du texte
+        //clef de la variable
         key = config->key;
         memcpy(&data[data_index], &(key), sizeof(uint16_t));
         data_index += sizeof(uint16_t);
+        #ifdef DEBUG
         printf("key = %d   ", key);
+        #endif
 
-        //texte
-        memcpy(&data[data_index], &(config->value), dataBlockSize);
-        data_index += dataBlockSize;
-        printf("value(%d) = %s\n", dataBlockSize, config->value);
+        //copier variable
+        switch (config->type) {
+            case type_string:
+                memcpy(&data[data_index], &(config->value_string), dataBlockSize);
+                #ifdef DEBUG
+                printf("value(%d / string) = '%s'\n", dataBlockSize, config->value_string);
+                #endif
+                break;
+            case type_int:
+                memcpy(&data[data_index], &(config->value_int), dataBlockSize);
+                #ifdef DEBUG
+                printf("value(%d / int) = %d\n", dataBlockSize, config->value_int);
+                #endif
+                break;
+        }
+        if(!error)
+            data_index += dataBlockSize;
 
+        error = false;
 
+        list_size++;
         i++;
         config = GenericCellGet(liste, i);
     }
+
+    data[0] = ((list_size) & 0xFF);
+    data[1] = (((list_size)>>8) & 0xFF);
 }
 
 void appvar_ecrire(char* nomDuFichier, char* nomDeLappvar, char* comment, GenericList* liste) {
@@ -142,5 +192,4 @@ void appvar_ecrire(char* nomDuFichier, char* nomDeLappvar, char* comment, Generi
     fwrite(data, fileSize, 1, fptr);
     fwrite(checksum, sizeof(checksum[0]), sizeof(checksum)/sizeof(checksum[0]), fptr);
     fclose(fptr);
-    printf("\n");
 }

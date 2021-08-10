@@ -5,9 +5,20 @@
 #define MAX_LINE_LENGTH 255
 #define MAX_VALUE_LENGTH 255
 
+#include "keys.h"
+#include "generic_lists.h"
+
 struct _configStruct {
-    local_keys key;
-    char value[MAX_VALUE_LENGTH];
+    keys key;
+    value_type type;
+    union {
+        int value_int;
+        char value_string[MAX_VALUE_LENGTH];
+        struct {
+            GenericList *value_struct;
+            GenericList *mother_list;
+        };
+    };
 };
 
 typedef struct _configStruct configStruct;
