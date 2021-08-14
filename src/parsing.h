@@ -15,6 +15,7 @@ struct _configStruct {
         int value_int;
         char value_string[MAX_VALUE_LENGTH];
         struct {
+            char struct_name[MAX_VALUE_LENGTH];
             GenericList *value_struct;
             GenericList *mother_list;
         };

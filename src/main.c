@@ -13,22 +13,28 @@ void delete_list(GenericList *liste){
     int i = 0;
     configStruct *config;
     config = GenericCellGet(liste, i);
-    
+
     #ifdef DEBUG
-    printf("\nDestroy list :\n");
+    printf("Destroy list :\n");
     #endif
 
     while(config) {
         switch(config->type) {
             case type_string:
                 #ifdef DEBUG
-                printf("key = %d value = '%s'\n", config->key, config->value_string);
+                printf("String key = %d value = '%s'\n", config->key, config->value_string);
                 #endif
                 break;
             case type_int:
                 #ifdef DEBUG
-                printf("key = %d value = %d\n", config->key, config->value_int);
+                printf("Int key = %d value = %d\n", config->key, config->value_int);
                 #endif
+                break;
+            case type_struct:
+                #ifdef DEBUG
+                printf("Struct key = %d value = %p\n", config->key, config->value_struct);
+                #endif
+                delete_list(config->value_struct);
                 break;
         }
         free(config);
@@ -36,6 +42,9 @@ void delete_list(GenericList *liste){
         config = GenericCellGet(liste, i);
     }
     GenericListFree(liste);
+    #ifdef DEBUG
+    printf("End of list\n");
+    #endif
 }
 
 int main() {
@@ -48,10 +57,13 @@ int main() {
     
     config_file_parse(spaceship_file, spaceship_liste);
 
-    appvar_ecrire("data.8xv", "data_1.0", "Data for Stellaris", spaceship_liste);
+    appvar_ecrire("data.8xv", "data", "Data for Stellaris", spaceship_liste);
 
     fclose(spaceship_file);
 
+    #ifdef DEBUG
+    printf("\n");
+    #endif
     delete_list(spaceship_liste);
     
     #ifdef DEBUG

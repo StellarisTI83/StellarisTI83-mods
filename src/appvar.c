@@ -9,11 +9,11 @@
 #include "generic_lists.h"
 #include "parsing.h"
 
-int sizeof_data(GenericList* liste) {
+int sizeof_data(GenericList* list) {
     configStruct *config;
     int fileSize = 0;
     int i = 0;
-    config = GenericCellGet(liste, i);
+    config = GenericCellGet(list, i);
     while(config) {
         switch(config->type) {
             case type_string:
@@ -22,15 +22,18 @@ int sizeof_data(GenericList* liste) {
             case type_int:
                 fileSize += sizeof(uint16_t) + sizeof(config->key) + sizeof(uint16_t);
                 break;
+            case type_struct:
+                fileSize += sizeof(uint16_t)*3;
+                fileSize += sizeof_data(config->value_struct);
+                break;
         }
         i++;
-        config = GenericCellGet(liste, i);
+        config = GenericCellGet(list, i);
     }
-    fileSize += sizeof(uint16_t);
     return fileSize;
 }
 
-void write_data(unsigned char *data, GenericList* liste, size_t fileSize) {
+void write_data(unsigned char *data, GenericList* list, size_t fileSize) {
     configStruct *config;
     uint16_t i = 0;
     uint16_t data_index = 0;
@@ -38,14 +41,9 @@ void write_data(unsigned char *data, GenericList* liste, size_t fileSize) {
     uint16_t key = 0;
     bool error = false;
     int list_size = 0;
-    
+    uint16_t temp = 0;
 
-    #ifdef DEBUG
-    printf("\nWrite data :\nsize = %d\n", GenericListArraySize(liste));
-    #endif
-
-    data_index += 2;
-    config = GenericCellGet(liste, i);
+    config = GenericCellGet(list, i);
     while(config) {
         //taille de la variable
         switch (config->type) {
@@ -55,13 +53,16 @@ void write_data(unsigned char *data, GenericList* liste, size_t fileSize) {
             case type_int:
                 dataBlockSize = sizeof(uint16_t);
                 break;
+            case type_struct:
+                dataBlockSize = sizeof_data(config->value_struct) - sizeof(uint16_t);
+                break;
             default:
                 #ifdef DEBUG
                 printf("Error unknow type '%d'\n", config->type);
                 #endif
                 error = true;
                 i++;
-                config = GenericCellGet(liste, i);
+                config = GenericCellGet(list, i);
                 continue;
                 break;
         }
@@ -84,13 +85,24 @@ void write_data(unsigned char *data, GenericList* liste, size_t fileSize) {
             case type_string:
                 memcpy(&data[data_index], &(config->value_string), dataBlockSize);
                 #ifdef DEBUG
-                printf("value(%d / string) = '%s'\n", dataBlockSize, config->value_string);
+                printf("value(%d / string) = '%s' at index %d\n", dataBlockSize, config->value_string, data_index);
                 #endif
                 break;
             case type_int:
                 memcpy(&data[data_index], &(config->value_int), dataBlockSize);
                 #ifdef DEBUG
-                printf("value(%d / int) = %d\n", dataBlockSize, config->value_int);
+                printf("value(%d / int) = %d at index %d\n", dataBlockSize, config->value_int, data_index);
+                #endif
+                break;
+            case type_struct:
+                temp = GenericListArraySize(config->value_struct);
+                #ifdef DEBUG
+                printf("struct(%d / arraysize: %d) = 0x%p at index %d\n", dataBlockSize, temp, config->value_struct, data_index);
+                #endif
+                memcpy(&data[data_index], &(temp), sizeof(uint16_t));
+                write_data(&data[data_index+2], config->value_struct, dataBlockSize);
+                #ifdef DEBUG
+                printf("end of struct(0x%p) at index %d\n", config->value_struct, data_index);
                 #endif
                 break;
         }
@@ -101,14 +113,11 @@ void write_data(unsigned char *data, GenericList* liste, size_t fileSize) {
 
         list_size++;
         i++;
-        config = GenericCellGet(liste, i);
+        config = GenericCellGet(list, i);
     }
-
-    data[0] = ((list_size) & 0xFF);
-    data[1] = (((list_size)>>8) & 0xFF);
 }
 
-void appvar_ecrire(char* nomDuFichier, char* nomDeLappvar, char* comment, GenericList* liste) {
+void appvar_ecrire(char* nomDuFichier, char* nomDeLappvar, char* comment, GenericList* list) {
     FILE *fptr;
     int fileSize = 0;
     unsigned char header[] = {
@@ -152,28 +161,36 @@ void appvar_ecrire(char* nomDuFichier, char* nomDeLappvar, char* comment, Generi
             header[11 + i] = comment[i];
     }
 
-    fileSize = sizeof_data(liste);
+    fileSize = sizeof_data(list);
     data = malloc(fileSize);
     
-    write_data(data, liste, fileSize);
+    #ifdef DEBUG
+    printf("\nWrite data :\nsize = %d\n", fileSize);
+    #endif
+    write_data(&data[4], list, fileSize);
+    data[0] = ((fileSize - sizeof(uint16_t)*2) & 0xFF);
+    data[1] = (((fileSize - sizeof(uint16_t)*2)>>8) & 0xFF);
+    data[2] = ((GenericListArraySize(list)) & 0xFF);
+    data[3] = (((GenericListArraySize(list))>>8) & 0xFF);
     
     header[53] = ((fileSize + sizeof(varheader)/sizeof(varheader[0])) & 0xFF);
     header[54] = ((fileSize + sizeof(varheader)/sizeof(varheader[0])>>8) & 0xFF);
 
     varheader[2] = ((fileSize + 2) & 0xFF);
     varheader[3] = (((fileSize + 2)>>8) & 0xFF);
+    //ecrire le nom du fichier
+        for (i = 0; i < 8; i++) {
+            if (i >= strlen(nomDeLappvar))
+                varheader[5 + i] = 0x00;
+            else
+                varheader[5 + i] = nomDeLappvar[i];
+        }
     varheader[15] = varheader[2];
     varheader[16] = varheader[3];
     varheader[17] = ((fileSize) & 0xFF);
     varheader[18] = (((fileSize)>>8) & 0xFF);
 
-    //ecrire le nom du fichier
-    for (i = 0; i < 8; i++) {
-        if (i >= strlen(nomDeLappvar))
-            varheader[5 + i] = 0x00;
-        else
-            varheader[5 + i] = nomDeLappvar[i];
-    }
+    
 
     for (int i = 0; i < fileSize; i++)
         sum += data[i];

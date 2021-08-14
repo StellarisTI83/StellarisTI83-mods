@@ -2,7 +2,7 @@
 #define KEYS_H
 
 enum _keys {
-    ky_none, ky_struct, ky_name, ky_ship_size
+    ky_none, ky_struct, ky_name, ky_power, ky_ship_type, ky_hull_life, ky_armor_life, ky_shield_life
 };
 
 typedef enum _keys keys;

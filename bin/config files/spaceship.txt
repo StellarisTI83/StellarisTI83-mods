@@ -1,7 +1,11 @@
 # spaceship file
 # identifier = value
 
-fregate_01 = {
-    name = "Fregate"
-    ship_size = 1
+science_01 = {
+    name = "Science"
+    ship_type = 1
+    power = 0
+    hull_life = 300
+    armor_life = 50
+    shield_life = 100
 }
